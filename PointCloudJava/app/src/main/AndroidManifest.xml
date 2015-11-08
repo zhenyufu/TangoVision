@@ -35,7 +35,7 @@
             android:required="true" />
 
         <activity
-            android:name="com.projecttango.experiments.javapointcloud.PointCloudActivity"
+            android:name="com.csmojo.tangov.PointCloudActivity"
             android:label="@string/menu_name"
             android:screenOrientation="nosensor" >
             <intent-filter>
