@@ -15,11 +15,15 @@
  */
 
 package com.csmojo.tangov;
+
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager.NameNotFoundException;
+import android.media.MediaPlayer;
 import android.os.Bundle;
+import android.os.Vibrator;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
@@ -99,6 +103,9 @@ public class PointCloudActivity extends Activity implements OnClickListener {
     private static final int UPDATE_INTERVAL_MS = 100;
     private Object mUiPoseLock = new Object();
     private Object mUiDepthLock = new Object();
+    private MediaPlayer soundTurn,soundLeft,soundRight;
+    private Vibrator vibrator;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -115,6 +122,15 @@ public class PointCloudActivity extends Activity implements OnClickListener {
         mRenderer = setupGLViewAndRenderer(mPointCloudManager);
         mTangoUx = setupTangoUxAndLayout();
         mIsTangoServiceConnected = false;
+
+        //create media player for warning sound
+
+        soundTurn = MediaPlayer.create(this, R.raw.caution);
+        soundLeft = MediaPlayer.create(this, R.raw.slightleft);
+        soundRight = MediaPlayer.create(this, R.raw.slightright);
+
+        vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+
         startUIThread();
     }
 
@@ -256,7 +272,7 @@ public class PointCloudActivity extends Activity implements OnClickListener {
                     mPointCloudFrameDelta = (mCurrentTimeStamp - mXyIjPreviousTimeStamp)
                             * SECS_TO_MILLISECS;
                     mXyIjPreviousTimeStamp = mCurrentTimeStamp;
-                    mAverageDepth = getAveragedDepth(xyzIj.xyz);
+                    mAverageDepth = calculate(xyzIj.xyz);
                     try {
                         mPointCount = xyzIj.xyzCount;
                     } catch (TangoErrorException e) {
@@ -464,21 +480,17 @@ public class PointCloudActivity extends Activity implements OnClickListener {
         return  tangoUx;
     }
 
-    /**
-     * Calculates the average depth from a point cloud buffer
-     * @param pointCloudBuffer
-     * @return Average depth.
-     */
+
     private float a = 0.5f;//cloest
     private float b = 1.5f;
     private float c = 3f;
     private float d = 4f;//furthest
-    private float threshold = 14;
-    private final int wait_time = 10; // in 0.05 secs
+    private float threshold = 100, thresh = 30;
+    private final int wait_time = 10; // in 0.05 secs //number of times this func may be called
     private int t1 = wait_time;//, t2 = wait_time, t3 = wait_time;
 
     //Very few depth points in mPoint cloud check exception
-    private float getAveragedDepth(FloatBuffer pointCloudBuffer){
+    private float calculate(FloatBuffer pointCloudBuffer){
         /*
         mPointCount = pointCloudBuffer.capacity() / 3;
         float totalZ = 0;
@@ -490,19 +502,70 @@ public class PointCloudActivity extends Activity implements OnClickListener {
             averageZ = totalZ / mPointCount;
         return  averageZ;
         */
-        float ab = 0;
-        float bc = 0;
-        float cd = 0;
+        int abL = 0,  abOther = 0, abR = 0;
         for (int i = 0; i < pointCloudBuffer.capacity() - 3; i = i + 3) {
             float myZ = pointCloudBuffer.get(i + 2);
-            if ( a < myZ  && myZ < b) { ab++; }
-            else if ( b < myZ  && myZ < c) { bc++; }
-            else  if ( c < myZ  && myZ < d) { cd++; }
+            float myX = pointCloudBuffer.get(i);
+
+            if ( a < myZ  && myZ < b) {
+
+
+                if(-0.2 <= myX && myX < 0){
+                    abL++;
+                }
+                else if(0 < myX && myX <= 0.2){
+                    abR++;
+                }
+                else{
+                    abOther++;
+                }
+
+
+            }
+
+            //else if ( b < myZ  && myZ < c) { bc++; }
+            //else  if ( c < myZ  && myZ < d) { cd++; }
         }
         t1--;// t2--; t3--;
         if(t1 <=0) {
-            if (ab > threshold) {
+            Boolean l = false, r = false;
+            int tot = abL + abOther + abR;
+            if ( tot > threshold) {
+
                 System.out.println("1st Warning : Item very close");
+
+                if(abL > thresh){
+                    l = true;
+                }
+                if(abR > thresh){
+                    r = true;
+                }
+
+                // turn around
+                if (l && r){
+                    vibrator.vibrate(500);
+                    soundTurn.start();
+                }
+                //go right
+                else if(l && !r){
+                    vibrator.vibrate(500);
+                    soundRight.start();
+                }
+                //go left
+                else if(r && !l){
+                    vibrator.vibrate(500);
+                    soundLeft.start();
+                }
+
+
+
+
+
+                System.out.println("tot: " + tot);
+                System.out.println("abL: " + abL);
+                System.out.println("abR: " + abR);
+                //System.out.println("bc: " + bc);
+                //System.out.println("cd: " + cd);
                 t1 = wait_time;
             }
 //            if (bc > threshold) {
@@ -513,7 +576,6 @@ public class PointCloudActivity extends Activity implements OnClickListener {
 //                System.out.println("3rd Warning : Item is far");
 //                t3 = wait_time;
 //            }
-
             //System.out.println("@time : "+t1+ "interval 1 contained" + ab+  "points");
         }
         //System.out.println("@time : "+t1+ "interval 1 contained" + ab+  "points");
