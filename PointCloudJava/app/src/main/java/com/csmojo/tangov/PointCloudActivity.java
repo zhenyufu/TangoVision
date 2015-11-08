@@ -469,7 +469,17 @@ public class PointCloudActivity extends Activity implements OnClickListener {
      * @param pointCloudBuffer
      * @return Average depth.
      */
+    private float a = 0.5f;//cloest
+    private float b = 1.5f;
+    private float c = 3f;
+    private float d = 4f;//furthest
+    private float threshold = 14;
+    private final int wait_time = 10; // in 0.05 secs
+    private int t1 = wait_time;//, t2 = wait_time, t3 = wait_time;
+
+    //Very few depth points in mPoint cloud check exception
     private float getAveragedDepth(FloatBuffer pointCloudBuffer){
+        /*
         mPointCount = pointCloudBuffer.capacity() / 3;
         float totalZ = 0;
         float averageZ = 0;
@@ -479,6 +489,36 @@ public class PointCloudActivity extends Activity implements OnClickListener {
         if (mPointCount != 0)
             averageZ = totalZ / mPointCount;
         return  averageZ;
+        */
+        float ab = 0;
+        float bc = 0;
+        float cd = 0;
+        for (int i = 0; i < pointCloudBuffer.capacity() - 3; i = i + 3) {
+            float myZ = pointCloudBuffer.get(i + 2);
+            if ( a < myZ  && myZ < b) { ab++; }
+            else if ( b < myZ  && myZ < c) { bc++; }
+            else  if ( c < myZ  && myZ < d) { cd++; }
+        }
+        t1--;// t2--; t3--;
+        if(t1 <=0) {
+            if (ab > threshold) {
+                System.out.println("1st Warning : Item very close");
+                t1 = wait_time;
+            }
+//            if (bc > threshold) {
+//                System.out.println("2nd Warning : Item close");
+//                //t2 = wait_time;
+//            }
+//            if (cd > threshold) {
+//                System.out.println("3rd Warning : Item is far");
+//                t3 = wait_time;
+//            }
+
+            //System.out.println("@time : "+t1+ "interval 1 contained" + ab+  "points");
+        }
+        //System.out.println("@time : "+t1+ "interval 1 contained" + ab+  "points");
+
+        return 0;
     }
 
 }
