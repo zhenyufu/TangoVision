@@ -103,7 +103,7 @@ public class PointCloudActivity extends Activity implements OnClickListener {
     private static final int UPDATE_INTERVAL_MS = 100;
     private Object mUiPoseLock = new Object();
     private Object mUiDepthLock = new Object();
-    private MediaPlayer soundTurn,soundLeft,soundRight;
+    private MediaPlayer soundTurn,soundLeft,soundRight, soundStart;
     private Vibrator vibrator;
 
 
@@ -128,7 +128,8 @@ public class PointCloudActivity extends Activity implements OnClickListener {
         soundTurn = MediaPlayer.create(this, R.raw.caution);
         soundLeft = MediaPlayer.create(this, R.raw.slightleft);
         soundRight = MediaPlayer.create(this, R.raw.slightright);
-
+        soundStart = MediaPlayer.create(this, R.raw.start);
+        soundStart.start();
         vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
 
         startUIThread();
@@ -149,6 +150,7 @@ public class PointCloudActivity extends Activity implements OnClickListener {
     @Override
     protected void onResume() {
         super.onResume();
+        soundStart.start();
         StartParams params = new StartParams();
         mTangoUx.start(params);
         if (!mIsTangoServiceConnected) {
