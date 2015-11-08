@@ -486,7 +486,7 @@ public class PointCloudActivity extends Activity implements OnClickListener {
     private float c = 3f;
     private float d = 4f;//furthest
     private float threshold = 100, thresh = 30;
-    private final int wait_time = 10; // in 0.05 secs //number of times this func may be called
+    private final int wait_time = 5; //number of times this func may be called
     private int t1 = wait_time;//, t2 = wait_time, t3 = wait_time;
 
     //Very few depth points in mPoint cloud check exception
